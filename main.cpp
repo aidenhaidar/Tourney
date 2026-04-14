@@ -533,7 +533,7 @@ void tryMove(int newRow, int newCol) {
                 statusMessage = "ALL CHECKPOINTS FOUND! The exit [E] is now open -- go get out!";
                 gameWon = true;   // checkpoint 9 is the exit tile, so game is won
             } else {
-                statusMessage = "Checkpoint " + to_string(checkpointHere) + " collected! ("
+                statusMessage = "Checkpoint " + to_string(checkpointHere) + " collected! +100 pts! ("
                               + to_string(checkpointsFound) + " / " + to_string(TOTAL_CHECKPOINTS) + ")";
             }
 
@@ -553,7 +553,8 @@ void tryMove(int newRow, int newCol) {
     //give survival points for each successful move (the longer you survive the more points you get)
     score += 10;
 
-    statusMessage = "";
+    //show the player they earned survival points for this move
+    statusMessage = "+10 survival points! (Score: " + to_string(score) + ")";
 
     // open exit at the end of the game
     if (newRow == 17 && newCol == 19 && exitUnlocked) {
@@ -565,16 +566,14 @@ void tryMove(int newRow, int newCol) {
         gameLost = true;
     }
 
-    //show warning messages as the lava gets higher
+    //show warning messages as the lava gets higher (these override the +10 message)
     int dangerLevel = (totalMoves * 20) / MAX_MOVES;
-    if (statusMessage == "") {
-        if (dangerLevel >= 18) {
-            statusMessage = "!!! THE LAVA IS ALMOST HERE! HURRY !!!";
-        } else if (dangerLevel >= 14) {
-            statusMessage = "DANGER! The lava is rising fast!";
-        } else if (dangerLevel >= 10 && totalMoves % 10 == 0) {
-            statusMessage = "The lava is getting closer...";
-        }
+    if (dangerLevel >= 18) {
+        statusMessage = "+10 pts! !!! THE LAVA IS ALMOST HERE! HURRY !!!";
+    } else if (dangerLevel >= 14) {
+        statusMessage = "+10 pts! DANGER! The lava is rising fast!";
+    } else if (dangerLevel >= 10 && totalMoves % 10 == 0) {
+        statusMessage = "+10 pts! The lava is getting closer...";
     }
 }
 
