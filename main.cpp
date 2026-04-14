@@ -11,7 +11,6 @@ using namespace std;
 const int ROWS = 19; //vertical
 const int COLS = 21; //horizontal
 const int TOTAL_CHECKPOINTS = 9;
-const int MOVES_PER_LIFE = 25; //the player gets 25 moves to find a checkpoint or they lose
 
 /*
 This is the maze setup
@@ -136,12 +135,10 @@ int checkpointsFound = 0; //for the checkpoint counter
 bool cpCollected[10] = {false, false, false, false, false, false, false, false, false, false}; //which checkpoint is found
 bool exitUnlocked = false; //after all checkpoints are grabbed this will be true
 bool gameWon = false;
-bool gameLost = false; //this turns true when the player runs out of moves or wrong answers
+bool gameLost = false; //this turns true when the player gets 2 wrong answers
 int totalMoves = 0;
-int movesSinceCheckpoint = 0; //resets to 0 every time the player solves a question
 int wrongAnswers = 0; //if this hits 2 the player loses no matter what
 const int MAX_WRONG = 2; //how many wrong answers before you lose
-int score = 0; //the player's running score during the game
 string statusMessage = "Find all 9 checkpoints to unlock the exit!";
 
 
@@ -181,54 +178,6 @@ int showMenu() {
     return choice - '0'; //converts the char to a number
 }
 
-
-// Prints the lava danger bar and the rising lava waves
-//the bar resets every time you solve a checkpoint question
-void printLavaBar() {
-    int movesLeft = MOVES_PER_LIFE - movesSinceCheckpoint;
-    int barFilled = (movesSinceCheckpoint * 15) / MOVES_PER_LIFE; //goes from 0 to 15
-
-    //draw the bar
-    cout << "\n  LAVA: [";
-    for (int i = 0; i < 15; i++) {
-        if (i < barFilled)
-            cout << "=";
-        else
-            cout << " ";
-    }
-    cout << "] ";
-
-    //pick a warning label based on how full the bar is
-    if (movesLeft > 10)
-        cout << "Low";
-    else if (movesLeft > 5)
-        cout << "Rising...";
-    else if (movesLeft > 2)
-        cout << "DANGER!";
-    else
-        cout << "!!! CRITICAL !!!";
-
-    cout << "  (" << movesLeft << " moves left!)\n";
-
-    //draw lava wave lines that rise up as danger gets worse
-    //the pattern shifts every move so it looks like the lava is actually moving
-    int waveCount = 0;
-    if (movesLeft <= 2) waveCount = 3;
-    else if (movesLeft <= 5) waveCount = 2;
-    else if (movesLeft <= 10) waveCount = 1;
-
-    for (int w = 0; w < waveCount; w++) {
-        cout << "  ";
-        for (int i = 0; i < 45; i++) {
-            //this makes the ^ characters shift position each turn
-            if ((i + totalMoves + w) % 4 == 0)
-                cout << "^";
-            else
-                cout << "~";
-        }
-        cout << "\n";
-    }
-}
 
 
 // Prints the maze for the start of every new turn
@@ -284,9 +233,6 @@ void printMaze() {
 void printHUD() {
     cout << "\n";
 
-    //show the players score
-    cout << "  Score: " << score << "\n";
-
     //show which checkpoints have been collected
     cout << "  Checkpoints: [ ";
     for (int i = 1; i <= TOTAL_CHECKPOINTS; i++) {
@@ -303,7 +249,7 @@ void printHUD() {
         cout << "   [X] Exit is locked";
 
     cout << "\n";
-    cout << "  Moves until lava: " << (MOVES_PER_LIFE - movesSinceCheckpoint);
+    cout << "  Moves: " << totalMoves;
     cout << "      Strikes: " << wrongAnswers << " / " << MAX_WRONG << "\n";
     cout << "  Controls: W = up, S = down, A = left, D = right, Q = quit\n";
 
@@ -314,7 +260,6 @@ void printHUD() {
 
 
 // How the questions are asked
-//same as before but now the player earns 100 points for each correct answer
 bool askQuestion(int cpNumber) {
     clearScreen();
 
@@ -341,10 +286,6 @@ bool askQuestion(int cpNumber) {
         cout << "  +--------------------------+\n";
         cout << "  |   CORRECT! Nice work!    |\n";
         cout << "  +--------------------------+\n\n";
-
-        //award points for the correct answer
-        score += 100;
-        cout << "  +100 points!\n\n";
 
         cout << "  Did you know: " << funFact[cpNumber] << "\n\n";
         cout << "  Press Enter to keep going...";
@@ -410,10 +351,6 @@ void tryMove(int newRow, int newCol) {
             playerRow = newRow;
             playerCol = newCol;
             totalMoves++;
-            movesSinceCheckpoint = 0; //reset the lava timer! solving a question saves you
-
-            //survival points for the move
-            score += 10;
 
             // Mark it as collected
             cpCollected[checkpointHere] = true;
@@ -424,7 +361,7 @@ void tryMove(int newRow, int newCol) {
                 exitUnlocked = true;
                 statusMessage = "ALL CHECKPOINTS FOUND! The exit [E] is now open -- go get out!";
             } else {
-                statusMessage = "Checkpoint " + to_string(checkpointHere) + " collected! +100 pts! ("
+                statusMessage = "Checkpoint " + to_string(checkpointHere) + " collected! ("
                               + to_string(checkpointsFound) + " / " + to_string(TOTAL_CHECKPOINTS) + ")";
             }
 
@@ -435,7 +372,7 @@ void tryMove(int newRow, int newCol) {
             //if they got 2 wrong total, game over
             if (wrongAnswers >= MAX_WRONG) {
                 gameLost = true;
-                statusMessage = "Too many wrong answers! The lava swallowed you!";
+                statusMessage = "Too many wrong answers! Game over!";
             } else {
                 statusMessage = "WRONG! (" + to_string(wrongAnswers) + "/" + to_string(MAX_WRONG)
                               + " strikes) Get one more wrong and you're done!";
@@ -449,33 +386,11 @@ void tryMove(int newRow, int newCol) {
     playerRow = newRow;
     playerCol = newCol;
     totalMoves++;
-    movesSinceCheckpoint++;
-
-    //give survival points for each successful move (the longer you survive the more points you get)
-    score += 10;
-
-    int movesLeft = MOVES_PER_LIFE - movesSinceCheckpoint;
-
-    //show the player they earned survival points for this move
-    statusMessage = "+10 survival points! (" + to_string(movesLeft) + " moves left)";
+    statusMessage = "";
 
     // open exit at the end of the game
     if (newRow == 17 && newCol == 19 && exitUnlocked) {
         gameWon = true;
-    }
-
-    //check if the player ran out of moves since their last checkpoint
-    if (movesSinceCheckpoint >= MOVES_PER_LIFE) {
-        gameLost = true;
-    }
-
-    //show warning messages as the lava gets higher (these override the +10 message)
-    if (movesLeft <= 2) {
-        statusMessage = "+10 pts! !!! THE LAVA IS ALMOST HERE! HURRY !!!";
-    } else if (movesLeft <= 5) {
-        statusMessage = "+10 pts! DANGER! Find a checkpoint fast!";
-    } else if (movesLeft <= 10) {
-        statusMessage = "+10 pts! The lava is getting closer...";
     }
 }
 
@@ -486,9 +401,6 @@ void showEndScreen() {
     clearScreen();
 
     if (gameWon) {
-        //give an escape bonus for actually making it out
-        score += 500;
-
         cout << "\n\n";
         cout << "  +==========================================+\n";
         cout << "  |                                          |\n";
@@ -503,19 +415,13 @@ void showEndScreen() {
         cout << "  |                                          |\n";
         cout << "  |          THE LAVA GOT YOU!               |\n";
         cout << "  |                                          |\n";
-        if (wrongAnswers >= MAX_WRONG)
-            cout << "  |    Too many wrong answers! (2 strikes)  |\n";
-        else
-            cout << "  |       You ran out of moves...            |\n";
+        cout << "  |    Too many wrong answers! (2 strikes)  |\n";
         cout << "  |                                          |\n";
         cout << "  +==========================================+\n\n";
     }
 
-    //show the final score
     cout << "  Total moves: " << totalMoves << "\n";
     cout << "  Checkpoints collected: " << checkpointsFound << " / " << TOTAL_CHECKPOINTS << "\n";
-    cout << "\n";
-    cout << "  FINAL SCORE: " << score << "\n";
     cout << "\n";
 
     cout << "  Press Enter to return to menu...";
@@ -535,10 +441,8 @@ void playGame() {
     gameWon = false;
     gameLost = false;
     totalMoves = 0;
-    movesSinceCheckpoint = 0;
     wrongAnswers = 0;
-    score = 0;
-    statusMessage = "Answer all 9 questions and reach the exit! 25 moves between checkpoints, 2 strikes = game over!";
+    statusMessage = "Answer all 9 questions and reach the exit! 2 wrong answers = game over!";
 
     for (int i = 0; i < 10; i++) {
         cpCollected[i] = false;
@@ -548,7 +452,6 @@ void playGame() {
     while (!gameWon && !gameLost) {
         clearScreen();
         printMaze();
-        printLavaBar();
         printHUD();
 
         cout << "\n  Enter move (W/A/S/D) or Q to quit: ";
