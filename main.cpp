@@ -11,7 +11,7 @@ using namespace std;
 const int ROWS = 19; //vertical
 const int COLS = 21; //horizontal
 const int TOTAL_CHECKPOINTS = 9;
-const int MAX_MOVES = 100; //the player only gets this many moves before the lava gets them
+const int MOVES_PER_LIFE = 15; //the player gets 15 moves to find a checkpoint or they lose
 
 /*
 This is the maze setup
@@ -138,6 +138,7 @@ bool exitUnlocked = false; //after all checkpoints are grabbed this will be true
 bool gameWon = false;
 bool gameLost = false; //this turns true when the player runs out of moves (lava gets them)
 int totalMoves = 0;
+int movesSinceCheckpoint = 0; //resets to 0 every time the player solves a question
 int score = 0; //the player's running score during the game
 string statusMessage = "Find all 9 checkpoints to unlock the exit!";
 
@@ -180,15 +181,15 @@ int showMenu() {
 
 
 // Prints the lava danger bar and the rising lava waves
-//this shows the player how close they are to running out of moves
+//the bar resets every time you solve a checkpoint question
 void printLavaBar() {
-    int movesLeft = MAX_MOVES - totalMoves;
-    int dangerLevel = (totalMoves * 20) / MAX_MOVES; //goes from 0 to 20
+    int movesLeft = MOVES_PER_LIFE - movesSinceCheckpoint;
+    int barFilled = (movesSinceCheckpoint * 15) / MOVES_PER_LIFE; //goes from 0 to 15
 
     //draw the bar
     cout << "\n  LAVA: [";
-    for (int i = 0; i < 20; i++) {
-        if (i < dangerLevel)
+    for (int i = 0; i < 15; i++) {
+        if (i < barFilled)
             cout << "=";
         else
             cout << " ";
@@ -196,27 +197,27 @@ void printLavaBar() {
     cout << "] ";
 
     //pick a warning label based on how full the bar is
-    if (dangerLevel < 5)
+    if (movesLeft > 10)
         cout << "Low";
-    else if (dangerLevel < 10)
+    else if (movesLeft > 5)
         cout << "Rising...";
-    else if (dangerLevel < 15)
+    else if (movesLeft > 2)
         cout << "DANGER!";
     else
         cout << "!!! CRITICAL !!!";
 
-    cout << "  (" << movesLeft << " moves left)\n";
+    cout << "  (" << movesLeft << " moves left!)\n";
 
     //draw lava wave lines that rise up as danger gets worse
     //the pattern shifts every move so it looks like the lava is actually moving
     int waveCount = 0;
-    if (dangerLevel > 14) waveCount = 3;
-    else if (dangerLevel > 10) waveCount = 2;
-    else if (dangerLevel > 6) waveCount = 1;
+    if (movesLeft <= 2) waveCount = 3;
+    else if (movesLeft <= 5) waveCount = 2;
+    else if (movesLeft <= 10) waveCount = 1;
 
     for (int w = 0; w < waveCount; w++) {
         cout << "  ";
-        for (int i = 0; i < 50; i++) {
+        for (int i = 0; i < 45; i++) {
             //this makes the ^ characters shift position each turn
             if ((i + totalMoves + w) % 4 == 0)
                 cout << "^";
@@ -300,7 +301,7 @@ void printHUD() {
         cout << "   [X] Exit is locked";
 
     cout << "\n";
-    cout << "  Moves: " << totalMoves << " / " << MAX_MOVES;
+    cout << "  Moves until lava: " << (MOVES_PER_LIFE - movesSinceCheckpoint);
     cout << "      Controls: W = up, S = down, A = left, D = right, Q = quit\n";
 
     if (statusMessage != "") {
@@ -406,6 +407,7 @@ void tryMove(int newRow, int newCol) {
             playerRow = newRow;
             playerCol = newCol;
             totalMoves++;
+            movesSinceCheckpoint = 0; //reset the lava timer! solving a question saves you
 
             //survival points for the move
             score += 10;
@@ -436,30 +438,32 @@ void tryMove(int newRow, int newCol) {
     playerRow = newRow;
     playerCol = newCol;
     totalMoves++;
+    movesSinceCheckpoint++;
 
     //give survival points for each successful move (the longer you survive the more points you get)
     score += 10;
 
+    int movesLeft = MOVES_PER_LIFE - movesSinceCheckpoint;
+
     //show the player they earned survival points for this move
-    statusMessage = "+10 survival points! (Score: " + to_string(score) + ")";
+    statusMessage = "+10 survival points! (" + to_string(movesLeft) + " moves left)";
 
     // open exit at the end of the game
     if (newRow == 17 && newCol == 19 && exitUnlocked) {
         gameWon = true;
     }
 
-    //check if the player used up all their moves
-    if (totalMoves >= MAX_MOVES) {
+    //check if the player ran out of moves since their last checkpoint
+    if (movesSinceCheckpoint >= MOVES_PER_LIFE) {
         gameLost = true;
     }
 
     //show warning messages as the lava gets higher (these override the +10 message)
-    int dangerLevel = (totalMoves * 20) / MAX_MOVES;
-    if (dangerLevel >= 18) {
+    if (movesLeft <= 2) {
         statusMessage = "+10 pts! !!! THE LAVA IS ALMOST HERE! HURRY !!!";
-    } else if (dangerLevel >= 14) {
-        statusMessage = "+10 pts! DANGER! The lava is rising fast!";
-    } else if (dangerLevel >= 10 && totalMoves % 10 == 0) {
+    } else if (movesLeft <= 5) {
+        statusMessage = "+10 pts! DANGER! Find a checkpoint fast!";
+    } else if (movesLeft <= 10) {
         statusMessage = "+10 pts! The lava is getting closer...";
     }
 }
@@ -517,8 +521,9 @@ void playGame() {
     gameWon = false;
     gameLost = false;
     totalMoves = 0;
+    movesSinceCheckpoint = 0;
     score = 0;
-    statusMessage = "Find all 9 checkpoints to unlock the exit!";
+    statusMessage = "Find a checkpoint within 15 moves or the lava gets you!";
 
     for (int i = 0; i < 10; i++) {
         cpCollected[i] = false;
