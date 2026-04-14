@@ -11,7 +11,7 @@ using namespace std;
 const int ROWS = 19; //vertical
 const int COLS = 21; //horizontal
 const int TOTAL_CHECKPOINTS = 9;
-const int MOVES_PER_LIFE = 15; //the player gets 15 moves to find a checkpoint or they lose
+const int MOVES_PER_LIFE = 25; //the player gets 25 moves to find a checkpoint or they lose
 
 /*
 This is the maze setup
@@ -423,7 +423,6 @@ void tryMove(int newRow, int newCol) {
             if (checkpointsFound == TOTAL_CHECKPOINTS) {
                 exitUnlocked = true;
                 statusMessage = "ALL CHECKPOINTS FOUND! The exit [E] is now open -- go get out!";
-                gameWon = true;   // checkpoint 9 is the exit tile, so game is won
             } else {
                 statusMessage = "Checkpoint " + to_string(checkpointHere) + " collected! +100 pts! ("
                               + to_string(checkpointsFound) + " / " + to_string(TOTAL_CHECKPOINTS) + ")";
@@ -539,7 +538,7 @@ void playGame() {
     movesSinceCheckpoint = 0;
     wrongAnswers = 0;
     score = 0;
-    statusMessage = "Find a checkpoint within 15 moves or the lava gets you! 2 wrong answers = game over!";
+    statusMessage = "Answer all 9 questions and reach the exit! 25 moves between checkpoints, 2 strikes = game over!";
 
     for (int i = 0; i < 10; i++) {
         cpCollected[i] = false;
