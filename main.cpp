@@ -136,9 +136,11 @@ int checkpointsFound = 0; //for the checkpoint counter
 bool cpCollected[10] = {false, false, false, false, false, false, false, false, false, false}; //which checkpoint is found
 bool exitUnlocked = false; //after all checkpoints are grabbed this will be true
 bool gameWon = false;
-bool gameLost = false; //this turns true when the player runs out of moves (lava gets them)
+bool gameLost = false; //this turns true when the player runs out of moves or wrong answers
 int totalMoves = 0;
 int movesSinceCheckpoint = 0; //resets to 0 every time the player solves a question
+int wrongAnswers = 0; //if this hits 2 the player loses no matter what
+const int MAX_WRONG = 2; //how many wrong answers before you lose
 int score = 0; //the player's running score during the game
 string statusMessage = "Find all 9 checkpoints to unlock the exit!";
 
@@ -302,7 +304,8 @@ void printHUD() {
 
     cout << "\n";
     cout << "  Moves until lava: " << (MOVES_PER_LIFE - movesSinceCheckpoint);
-    cout << "      Controls: W = up, S = down, A = left, D = right, Q = quit\n";
+    cout << "      Strikes: " << wrongAnswers << " / " << MAX_WRONG << "\n";
+    cout << "  Controls: W = up, S = down, A = left, D = right, Q = quit\n";
 
     if (statusMessage != "") {
         cout << "\n  >> " << statusMessage << "\n";
@@ -428,7 +431,16 @@ void tryMove(int newRow, int newCol) {
 
         } else {
             // Wrong answer -- player stays put (don't update playerRow/playerCol)
-            statusMessage = "Wrong answer. Find that checkpoint again to retry.";
+            wrongAnswers++;
+
+            //if they got 2 wrong total, game over
+            if (wrongAnswers >= MAX_WRONG) {
+                gameLost = true;
+                statusMessage = "Too many wrong answers! The lava swallowed you!";
+            } else {
+                statusMessage = "WRONG! (" + to_string(wrongAnswers) + "/" + to_string(MAX_WRONG)
+                              + " strikes) Get one more wrong and you're done!";
+            }
         }
 
         return;
@@ -492,7 +504,10 @@ void showEndScreen() {
         cout << "  |                                          |\n";
         cout << "  |          THE LAVA GOT YOU!               |\n";
         cout << "  |                                          |\n";
-        cout << "  |       You ran out of moves...            |\n";
+        if (wrongAnswers >= MAX_WRONG)
+            cout << "  |    Too many wrong answers! (2 strikes)  |\n";
+        else
+            cout << "  |       You ran out of moves...            |\n";
         cout << "  |                                          |\n";
         cout << "  +==========================================+\n\n";
     }
@@ -522,8 +537,9 @@ void playGame() {
     gameLost = false;
     totalMoves = 0;
     movesSinceCheckpoint = 0;
+    wrongAnswers = 0;
     score = 0;
-    statusMessage = "Find a checkpoint within 15 moves or the lava gets you!";
+    statusMessage = "Find a checkpoint within 15 moves or the lava gets you! 2 wrong answers = game over!";
 
     for (int i = 0; i < 10; i++) {
         cpCollected[i] = false;
