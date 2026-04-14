@@ -5,15 +5,13 @@
 
 #include <iostream>
 #include <string>
-#include <fstream>
 using namespace std;
 
 //Constants for the game
 const int ROWS = 19; //vertical
 const int COLS = 21; //horizontal
 const int TOTAL_CHECKPOINTS = 9;
-const int MAX_MOVES = 300; //the player only gets this many moves before the lava gets them
-const int MAX_LEADERBOARD = 5; //we only keep the top 5 scores
+const int MAX_MOVES = 100; //the player only gets this many moves before the lava gets them
 
 /*
 This is the maze setup
@@ -144,11 +142,6 @@ int score = 0; //the player's running score during the game
 string statusMessage = "Find all 9 checkpoints to unlock the exit!";
 
 
-// Leaderboard data
-//we use parallel arrays to store names and scores (same idea as cpRow and cpCol)
-string lbNames[5]; //the name for each leaderboard slot
-int lbScores[5]; //the score for each leaderboard slot
-int lbCount = 0; //how many entries are in the leaderboard right now
 
 
 // Clears the console after each turn
@@ -161,111 +154,6 @@ void clearScreen() {
 }
 
 
-// Loads the leaderboard from the file
-//the file stores: count on the first line, then alternating name and score lines
-void loadLeaderboard() {
-    ifstream inFile("leaderboard.txt");
-
-    //if the file doesnt exist yet thats fine, just set count to 0
-    if (!inFile.is_open()) {
-        lbCount = 0;
-        return;
-    }
-
-    inFile >> lbCount;
-    for (int i = 0; i < lbCount; i++) {
-        inFile >> lbNames[i];
-        inFile >> lbScores[i];
-    }
-    inFile.close();
-}
-
-
-// Saves the leaderboard to the file
-void saveLeaderboard() {
-    ofstream outFile("leaderboard.txt");
-    outFile << lbCount << endl;
-    for (int i = 0; i < lbCount; i++) {
-        outFile << lbNames[i] << endl;
-        outFile << lbScores[i] << endl;
-    }
-    outFile.close();
-}
-
-
-// Adds a new score to the leaderboard and sorts it highest to lowest
-void addScore(string name, int playerScore) {
-
-    //if the leaderboard isnt full yet just add the new entry at the end
-    if (lbCount < MAX_LEADERBOARD) {
-        lbNames[lbCount] = name;
-        lbScores[lbCount] = playerScore;
-        lbCount++;
-    } else {
-        //leaderboard is full so find the lowest score and replace it
-        int lowest = 0;
-        for (int i = 1; i < lbCount; i++) {
-            if (lbScores[i] < lbScores[lowest]) {
-                lowest = i;
-            }
-        }
-        //only replace if the new score is actually higher
-        if (playerScore > lbScores[lowest]) {
-            lbNames[lowest] = name;
-            lbScores[lowest] = playerScore;
-        }
-    }
-
-    //simple bubble sort to put the highest scores on top
-    for (int i = 0; i < lbCount - 1; i++) {
-        for (int j = 0; j < lbCount - i - 1; j++) {
-            if (lbScores[j] < lbScores[j + 1]) {
-                //swap the scores
-                int tempScore = lbScores[j];
-                lbScores[j] = lbScores[j + 1];
-                lbScores[j + 1] = tempScore;
-                //swap the names too so they stay matched up
-                string tempName = lbNames[j];
-                lbNames[j] = lbNames[j + 1];
-                lbNames[j + 1] = tempName;
-            }
-        }
-    }
-
-    saveLeaderboard();
-}
-
-
-// Shows the leaderboard screen
-void showLeaderboard() {
-    clearScreen();
-
-    cout << "\n";
-    cout << "  +====================================+\n";
-    cout << "  |        LEADERBOARD  (TOP 5)        |\n";
-    cout << "  +====================================+\n";
-    cout << "\n";
-
-    if (lbCount == 0) {
-        cout << "  No scores yet! Be the first to play!\n";
-    } else {
-        cout << "  Rank   Name               Score\n";
-        cout << "  ----   ----               -----\n";
-        for (int i = 0; i < lbCount; i++) {
-            cout << "  #" << (i + 1) << "     " << lbNames[i];
-
-            //pad the name with spaces so the scores line up nicely
-            for (int s = lbNames[i].length(); s < 18; s++) {
-                cout << " ";
-            }
-            cout << lbScores[i] << "\n";
-        }
-    }
-
-    cout << "\n  Press Enter to go back to the menu...";
-    cin.ignore();
-    cin.get();
-}
 
 
 // Shows the main menu and returns whatever the player picked
@@ -281,8 +169,7 @@ int showMenu() {
     cout << "  +====================================+\n";
     cout << "\n";
     cout << "  1) Play Game\n";
-    cout << "  2) Leaderboard\n";
-    cout << "  3) Quit\n";
+    cout << "  2) Quit\n";
     cout << "\n";
     cout << "  Enter your choice: ";
 
@@ -613,15 +500,7 @@ void showEndScreen() {
     cout << "  FINAL SCORE: " << score << "\n";
     cout << "\n";
 
-    //ask for name and save it to the leaderboard
-    cout << "  Enter your name for the leaderboard: ";
-    string playerName;
-    cin >> playerName;
-
-    addScore(playerName, score);
-    cout << "\n  Score saved! Check the leaderboard from the main menu.\n";
-
-    cout << "\n  Press Enter to return to menu...";
+    cout << "  Press Enter to return to menu...";
     cin.ignore();
     cin.get();
 }
@@ -682,9 +561,6 @@ void playGame() {
 // Main
 int main() {
 
-    //load the leaderboard from the file when the program first starts
-    loadLeaderboard();
-
     bool running = true;
 
     //this loop keeps the menu going until the player picks quit
@@ -694,8 +570,6 @@ int main() {
         if (choice == 1) {
             playGame();
         } else if (choice == 2) {
-            showLeaderboard();
-        } else if (choice == 3) {
             cout << "\n  Thanks for playing!\n\n";
             running = false;
         }
